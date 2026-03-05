@@ -1,0 +1,71 @@
+server:
+  port: "8080"
+  host: "0.0.0.0"
+  read_timeout: "10s"
+  write_timeout: "30s"
+
+log:
+  level: "debug"
+  format: "text"
+  file: "logs/soc_agent.log"
+
+eino:
+  trace_enabled: true
+  cozeloop_api_token: "[YOUR-COZELOOP-API-TOKEN]"
+  cozeloop_workspace_id: "[YOUR-COZELOOP-WORKSPACE-ID]"
+
+llm:
+  volc_ark:
+    model_name: "doubao-seed-1-6-250615"
+    api_key: "[YOUR-API-KEY]"
+    base_url: "https://ark.cn-beijing.volces.com/api/v3"
+    temperature: 0.1
+    max_tokens: 20480
+    timeout: 600
+    provider: "volc_ark"
+  deep_seek:
+    model_name: "deepseek-chat"
+    api_key: "[YOUR-API-KEY]"
+    base_url: "https://api.deepseek.com/v1"
+    temperature: 0.1
+    max_tokens: 20480
+    timeout: 600
+    provider: "deep_seek"
+  qwen3:
+    model_name: "Qwen/Qwen3-8B"
+    api_key: "[YOUR-API-KEY]"
+    base_url: "https://api.siliconflow.cn/v1/"
+    temperature: 0.1
+    max_tokens: 20480
+    timeout: 600
+    provider: "openai"
+
+milvus:
+  addr: "http://1.2.3.4:19530"
+  collection: "alert_unstruct_vec"
+  username: "root"
+  password: "[YOUR-MILVUS-PASSWORD]"
+  database: "default"
+  vector_field: "vector"
+  metric_type: "L2"
+  top_k: 5
+  score_threshold: 0.8
+
+mongodb:
+  host: "127.0.0.1:27017"
+  database: "soc_agent"
+  username: "soc"
+  password: "[YOUR-MONGODB-PASSWORD]"
+  auth_source: "admin"
+
+mcp:
+  mcp_servers:
+    sec_agent:
+      url: "[YOUR-SEC-AGENT-MCP-URL]"
+  default_server: "sec_agent"
+  timeout: "60s"
+
+embedding:
+  base_url: "http://localhost:11434"
+  model: "bge-m3"
+  timeout: 600

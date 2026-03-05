@@ -1,0 +1,1274 @@
+{
+  "name": "SOCAgentWorkflow",
+  "node_trigger_mode": "AnyPredecessor",
+  "input_type": {
+    "title": "models.WorkflowInput",
+    "description": "工作流输入参数"
+  },
+  "output_type": {
+    "title": "models.AlertResponse",
+    "description": "工作流输出结果"
+  },
+  "gen_local_state": {},
+  "id": "SOCAgentWorkflow",
+  "component": "Graph",
+  "nodes": [
+    {
+      "id": "start",
+      "key": "start",
+      "name": "Start",
+      "type": "start",
+      "layoutData": {
+        "position": {
+          "x": 50,
+          "y": 50
+        }
+      }
+    },
+    {
+      "id": "end",
+      "key": "end",
+      "name": "End",
+      "type": "end",
+      "layoutData": {
+        "position": {
+          "x": 1200,
+          "y": 50
+        }
+      }
+    },
+    {
+      "id": "alert_parser_template",
+      "key": "alert_parser_template",
+      "name": "告警解析模板",
+      "type": "ChatTemplate",
+      "component_schema": {
+        "name": "chatTemplate",
+        "component": "ChatTemplate",
+        "component_source": "official",
+        "identifier": "github.com/cloudwego/eino/components/prompt",
+        "input_type": {
+          "title": "map[string]any",
+          "description": "告警解析模板输入"
+        },
+        "output_type": {
+          "title": "[]*schema.Message",
+          "description": "告警解析模板输出"
+        },
+        "config": {
+          "description": "github.com/cloudwego/eino/blob/main/components/prompt/chat_template.go",
+          "schema": {
+            "type": "object",
+            "description": "告警解析模板配置",
+            "properties": {
+              "FormatType": {
+                "type": "number",
+                "description": "格式化类型",
+                "enum": ["0", "1", "2"],
+                "goDefinition": {
+                  "libraryRef": {
+                    "version": "",
+                    "module": "",
+                    "pkgPath": ""
+                  },
+                  "typeName": "schema.FormatType",
+                  "kind": "uint8",
+                  "isPtr": false
+                }
+              }
+            },
+            "propertyOrder": ["FormatType"],
+            "goDefinition": {
+              "libraryRef": {
+                "version": "",
+                "module": "",
+                "pkgPath": ""
+              },
+              "typeName": "Config",
+              "kind": "struct",
+              "isPtr": false
+            }
+          },
+          "config_input": "{}"
+        },
+        "is_io_type_mutable": false,
+        "version": "1.0.0"
+      },
+      "layoutData": {
+        "position": {
+          "x": 200,
+          "y": 100
+        }
+      }
+    },
+    {
+      "id": "alert_parser_model",
+      "key": "alert_parser_model",
+      "name": "告警解析模型",
+      "type": "ChatModel",
+      "component_schema": {
+        "name": "openai",
+        "component": "ChatModel",
+        "component_source": "official",
+        "identifier": "github.com/cloudwego/eino-ext/components/model/openai",
+        "input_type": {
+          "title": "[]*schema.Message",
+          "description": "告警解析模型输入"
+        },
+        "output_type": {
+          "title": "*schema.Message",
+          "description": "告警解析模型输出"
+        },
+        "config": {
+          "description": "github.com/cloudwego/eino-ext/blob/main/components/model/openai/chatmodel.go",
+          "schema": {
+            "type": "object",
+            "description": "告警解析模型配置",
+            "properties": {
+              "APIKey": {
+                "type": "string",
+                "description": "API密钥",
+                "goDefinition": {
+                  "libraryRef": {
+                    "version": "",
+                    "module": "",
+                    "pkgPath": ""
+                  },
+                  "typeName": "string",
+                  "kind": "string",
+                  "isPtr": false
+                }
+              },
+              "Model": {
+                "type": "string",
+                "description": "模型名称",
+                "goDefinition": {
+                  "libraryRef": {
+                    "version": "",
+                    "module": "",
+                    "pkgPath": ""
+                  },
+                  "typeName": "string",
+                  "kind": "string",
+                  "isPtr": false
+                }
+              }
+            },
+            "propertyOrder": ["APIKey", "Model"],
+            "goDefinition": {
+              "libraryRef": {
+                "version": "",
+                "module": "",
+                "pkgPath": ""
+              },
+              "typeName": "openai.ChatModelConfig",
+              "kind": "struct",
+              "isPtr": false
+            }
+          },
+          "config_input": ""
+        },
+        "is_io_type_mutable": false,
+        "version": "1.0.0"
+      },
+      "layoutData": {
+        "position": {
+          "x": 400,
+          "y": 100
+        }
+      }
+    },
+    {
+      "id": "alert_parser_lambda",
+      "key": "alert_parser_lambda",
+      "name": "告警解析转换",
+      "type": "Lambda",
+      "component_schema": {
+        "name": "Lambda",
+        "component": "Lambda",
+        "component_source": "custom",
+        "input_type": {
+          "title": "ChatModelResult",
+          "description": "告警解析模型结果"
+        },
+        "output_type": {
+          "title": "*models.AlertUnifiedModel",
+          "description": "统一告警模型"
+        },
+        "extra_property": {
+          "schema": {
+            "type": "object",
+            "description": "Lambda配置",
+            "properties": {
+              "has_option": {
+                "type": "boolean",
+                "description": "是否有选项"
+              },
+              "interaction_type": {
+                "type": "string",
+                "description": "交互类型",
+                "enum": ["invoke", "stream", "collect", "transform"]
+              },
+              "option_package_path": {
+                "type": "string",
+                "description": "选项包路径"
+              },
+              "option_type_name": {
+                "type": "string",
+                "description": "选项类型名称"
+              }
+            },
+            "required": ["interaction_type", "has_option"]
+          },
+          "extra_property_input": "{\"interaction_type\":\"invoke\"}"
+        },
+        "is_io_type_mutable": true,
+        "version": "1.0.0"
+      },
+      "layoutData": {
+        "position": {
+          "x": 600,
+          "y": 100
+        }
+      }
+    },
+    {
+      "id": "use_tool_template",
+      "key": "use_tool_template",
+      "name": "工具使用模板",
+      "type": "ChatTemplate",
+      "component_schema": {
+        "name": "chatTemplate",
+        "component": "ChatTemplate",
+        "component_source": "official",
+        "identifier": "github.com/cloudwego/eino/components/prompt",
+        "input_type": {
+          "title": "map[string]any",
+          "description": "工具使用模板输入"
+        },
+        "output_type": {
+          "title": "[]*schema.Message",
+          "description": "工具使用模板输出"
+        },
+        "config": {
+          "description": "github.com/cloudwego/eino/blob/main/components/prompt/chat_template.go",
+          "schema": {
+            "type": "object",
+            "description": "工具使用模板配置",
+            "properties": {
+              "FormatType": {
+                "type": "number",
+                "description": "格式化类型",
+                "enum": ["0", "1", "2"],
+                "goDefinition": {
+                  "libraryRef": {
+                    "version": "",
+                    "module": "",
+                    "pkgPath": ""
+                  },
+                  "typeName": "schema.FormatType",
+                  "kind": "uint8",
+                  "isPtr": false
+                }
+              }
+            },
+            "propertyOrder": ["FormatType"],
+            "goDefinition": {
+              "libraryRef": {
+                "version": "",
+                "module": "",
+                "pkgPath": ""
+              },
+              "typeName": "Config",
+              "kind": "struct",
+              "isPtr": false
+            }
+          },
+          "config_input": "{}"
+        },
+        "is_io_type_mutable": false,
+        "version": "1.0.0"
+      },
+      "layoutData": {
+        "position": {
+          "x": 200,
+          "y": 200
+        }
+      }
+    },
+    {
+      "id": "use_tool_model",
+      "key": "use_tool_model",
+      "name": "工具使用模型",
+      "type": "ChatModel",
+      "component_schema": {
+        "name": "openai",
+        "component": "ChatModel",
+        "component_source": "official",
+        "identifier": "github.com/cloudwego/eino-ext/components/model/openai",
+        "input_type": {
+          "title": "[]*schema.Message",
+          "description": "工具使用模型输入"
+        },
+        "output_type": {
+          "title": "*schema.Message",
+          "description": "工具使用模型输出"
+        },
+        "config": {
+          "description": "github.com/cloudwego/eino-ext/blob/main/components/model/openai/chatmodel.go",
+          "schema": {
+            "type": "object",
+            "description": "工具使用模型配置",
+            "properties": {
+              "APIKey": {
+                "type": "string",
+                "description": "API密钥",
+                "goDefinition": {
+                  "libraryRef": {
+                    "version": "",
+                    "module": "",
+                    "pkgPath": ""
+                  },
+                  "typeName": "string",
+                  "kind": "string",
+                  "isPtr": false
+                }
+              },
+              "Model": {
+                "type": "string",
+                "description": "模型名称",
+                "goDefinition": {
+                  "libraryRef": {
+                    "version": "",
+                    "module": "",
+                    "pkgPath": ""
+                  },
+                  "typeName": "string",
+                  "kind": "string",
+                  "isPtr": false
+                }
+              }
+            },
+            "propertyOrder": ["APIKey", "Model"],
+            "goDefinition": {
+              "libraryRef": {
+                "version": "",
+                "module": "",
+                "pkgPath": ""
+              },
+              "typeName": "openai.ChatModelConfig",
+              "kind": "struct",
+              "isPtr": false
+            }
+          },
+          "config_input": ""
+        },
+        "is_io_type_mutable": false,
+        "version": "1.0.0"
+      },
+      "layoutData": {
+        "position": {
+          "x": 400,
+          "y": 200
+        }
+      }
+    },
+    {
+      "id": "use_tool_node",
+      "key": "use_tool_node",
+      "name": "工具调用节点",
+      "type": "Tools",
+      "component_schema": {
+        "name": "Tools",
+        "component": "Tools",
+        "component_source": "official",
+        "identifier": "github.com/cloudwego/eino/components/tool",
+        "input_type": {
+          "title": "*schema.Message",
+          "description": "工具调用输入"
+        },
+        "output_type": {
+          "title": "[]*schema.Message",
+          "description": "工具调用输出"
+        },
+        "config": {
+          "description": "github.com/cloudwego/eino/blob/main/components/tool/tools.go",
+          "schema": {
+            "type": "object",
+            "description": "工具配置",
+            "properties": {
+              "Tools": {
+                "type": "array",
+                "description": "工具列表",
+                "items": {
+                  "type": "object",
+                  "description": "工具",
+                  "properties": {
+                    "Name": {
+                      "type": "string",
+                      "description": "工具名称"
+                    },
+                    "Description": {
+                      "type": "string",
+                      "description": "工具描述"
+                    }
+                  }
+                }
+              }
+            },
+            "propertyOrder": ["Tools"]
+          },
+          "config_input": "{}"
+        },
+        "is_io_type_mutable": false,
+        "version": "1.0.0"
+      },
+      "layoutData": {
+        "position": {
+          "x": 600,
+          "y": 200
+        }
+      }
+    },
+    {
+      "id": "knowledge_retrieval",
+      "key": "knowledge_retrieval",
+      "name": "知识检索",
+      "type": "Lambda",
+      "component_schema": {
+        "name": "Lambda",
+        "component": "Lambda",
+        "component_source": "custom",
+        "input_type": {
+          "title": "retrievalInput",
+          "description": "知识检索输入"
+        },
+        "output_type": {
+          "title": "string",
+          "description": "知识检索结果"
+        },
+        "extra_property": {
+          "schema": {
+            "type": "object",
+            "description": "Lambda配置",
+            "properties": {
+              "has_option": {
+                "type": "boolean",
+                "description": "是否有选项"
+              },
+              "interaction_type": {
+                "type": "string",
+                "description": "交互类型",
+                "enum": ["invoke", "stream", "collect", "transform"]
+              },
+              "option_package_path": {
+                "type": "string",
+                "description": "选项包路径"
+              },
+              "option_type_name": {
+                "type": "string",
+                "description": "选项类型名称"
+              }
+            },
+            "required": ["interaction_type", "has_option"]
+          },
+          "extra_property_input": "{\"interaction_type\":\"invoke\"}"
+        },
+        "is_io_type_mutable": true,
+        "version": "1.0.0"
+      },
+      "layoutData": {
+        "position": {
+          "x": 800,
+          "y": 200
+        }
+      }
+    },
+    {
+      "id": "initial_judgment_template",
+      "key": "initial_judgment_template",
+      "name": "初次研判模板",
+      "type": "ChatTemplate",
+      "component_schema": {
+        "name": "chatTemplate",
+        "component": "ChatTemplate",
+        "component_source": "official",
+        "identifier": "github.com/cloudwego/eino/components/prompt",
+        "input_type": {
+          "title": "map[string]any",
+          "description": "初次研判模板输入"
+        },
+        "output_type": {
+          "title": "[]*schema.Message",
+          "description": "初次研判模板输出"
+        },
+        "config": {
+          "description": "github.com/cloudwego/eino/blob/main/components/prompt/chat_template.go",
+          "schema": {
+            "type": "object",
+            "description": "初次研判模板配置",
+            "properties": {
+              "FormatType": {
+                "type": "number",
+                "description": "格式化类型",
+                "enum": ["0", "1", "2"],
+                "goDefinition": {
+                  "libraryRef": {
+                    "version": "",
+                    "module": "",
+                    "pkgPath": ""
+                  },
+                  "typeName": "schema.FormatType",
+                  "kind": "uint8",
+                  "isPtr": false
+                }
+              }
+            },
+            "propertyOrder": ["FormatType"],
+            "goDefinition": {
+              "libraryRef": {
+                "version": "",
+                "module": "",
+                "pkgPath": ""
+              },
+              "typeName": "Config",
+              "kind": "struct",
+              "isPtr": false
+            }
+          },
+          "config_input": "{}"
+        },
+        "is_io_type_mutable": false,
+        "version": "1.0.0"
+      },
+      "layoutData": {
+        "position": {
+          "x": 200,
+          "y": 300
+        }
+      }
+    },
+    {
+      "id": "initial_judgment_model",
+      "key": "initial_judgment_model",
+      "name": "初次研判模型",
+      "type": "ChatModel",
+      "component_schema": {
+        "name": "openai",
+        "component": "ChatModel",
+        "component_source": "official",
+        "identifier": "github.com/cloudwego/eino-ext/components/model/openai",
+        "input_type": {
+          "title": "[]*schema.Message",
+          "description": "初次研判模型输入"
+        },
+        "output_type": {
+          "title": "*schema.Message",
+          "description": "初次研判模型输出"
+        },
+        "config": {
+          "description": "github.com/cloudwego/eino-ext/blob/main/components/model/openai/chatmodel.go",
+          "schema": {
+            "type": "object",
+            "description": "初次研判模型配置",
+            "properties": {
+              "APIKey": {
+                "type": "string",
+                "description": "API密钥",
+                "goDefinition": {
+                  "libraryRef": {
+                    "version": "",
+                    "module": "",
+                    "pkgPath": ""
+                  },
+                  "typeName": "string",
+                  "kind": "string",
+                  "isPtr": false
+                }
+              },
+              "Model": {
+                "type": "string",
+                "description": "模型名称",
+                "goDefinition": {
+                  "libraryRef": {
+                    "version": "",
+                    "module": "",
+                    "pkgPath": ""
+                  },
+                  "typeName": "string",
+                  "kind": "string",
+                  "isPtr": false
+                }
+              }
+            },
+            "propertyOrder": ["APIKey", "Model"],
+            "goDefinition": {
+              "libraryRef": {
+                "version": "",
+                "module": "",
+                "pkgPath": ""
+              },
+              "typeName": "openai.ChatModelConfig",
+              "kind": "struct",
+              "isPtr": false
+            }
+          },
+          "config_input": ""
+        },
+        "is_io_type_mutable": false,
+        "version": "1.0.0"
+      },
+      "layoutData": {
+        "position": {
+          "x": 400,
+          "y": 300
+        }
+      }
+    },
+    {
+      "id": "initial_judgment_lambda",
+      "key": "initial_judgment_lambda",
+      "name": "初次研判转换",
+      "type": "Lambda",
+      "component_schema": {
+        "name": "Lambda",
+        "component": "Lambda",
+        "component_source": "custom",
+        "input_type": {
+          "title": "ChatModelResult",
+          "description": "初次研判模型结果"
+        },
+        "output_type": {
+          "title": "*models.InitialJudgmentResult",
+          "description": "初次研判结果"
+        },
+        "extra_property": {
+          "schema": {
+            "type": "object",
+            "description": "Lambda配置",
+            "properties": {
+              "has_option": {
+                "type": "boolean",
+                "description": "是否有选项"
+              },
+              "interaction_type": {
+                "type": "string",
+                "description": "交互类型",
+                "enum": ["invoke", "stream", "collect", "transform"]
+              },
+              "option_package_path": {
+                "type": "string",
+                "description": "选项包路径"
+              },
+              "option_type_name": {
+                "type": "string",
+                "description": "选项类型名称"
+              }
+            },
+            "required": ["interaction_type", "has_option"]
+          },
+          "extra_property_input": "{\"interaction_type\":\"invoke\"}"
+        },
+        "is_io_type_mutable": true,
+        "version": "1.0.0"
+      },
+      "layoutData": {
+        "position": {
+          "x": 600,
+          "y": 300
+        }
+      }
+    },
+    {
+      "id": "initial_unified_result_integration",
+      "key": "initial_unified_result_integration",
+      "name": "初次结果整合",
+      "type": "Lambda",
+      "component_schema": {
+        "name": "Lambda",
+        "component": "Lambda",
+        "component_source": "custom",
+        "input_type": {
+          "title": "UnifiedIntegrationInput",
+          "description": "结果整合输入"
+        },
+        "output_type": {
+          "title": "models.AlertResponse",
+          "description": "告警响应结果"
+        },
+        "extra_property": {
+          "schema": {
+            "type": "object",
+            "description": "Lambda配置",
+            "properties": {
+              "has_option": {
+                "type": "boolean",
+                "description": "是否有选项"
+              },
+              "interaction_type": {
+                "type": "string",
+                "description": "交互类型",
+                "enum": ["invoke", "stream", "collect", "transform"]
+              },
+              "option_package_path": {
+                "type": "string",
+                "description": "选项包路径"
+              },
+              "option_type_name": {
+                "type": "string",
+                "description": "选项类型名称"
+              }
+            },
+            "required": ["interaction_type", "has_option"]
+          },
+          "extra_property_input": "{\"interaction_type\":\"invoke\"}"
+        },
+        "is_io_type_mutable": true,
+        "version": "1.0.0"
+      },
+      "layoutData": {
+        "position": {
+          "x": 800,
+          "y": 300
+        }
+      }
+    },
+    {
+      "id": "initial_result_recieve",
+      "key": "initial_result_recieve",
+      "name": "接收初次结果",
+      "type": "Lambda",
+      "component_schema": {
+        "name": "Lambda",
+        "component": "Lambda",
+        "component_source": "custom",
+        "input_type": {
+          "title": "models.AlertResponse",
+          "description": "初次结果整合输出"
+        },
+        "output_type": {
+          "title": "*models.DeepJudgmentInput",
+          "description": "深度研判输入"
+        },
+        "extra_property": {
+          "schema": {
+            "type": "object",
+            "description": "Lambda配置",
+            "properties": {
+              "has_option": {
+                "type": "boolean",
+                "description": "是否有选项"
+              },
+              "interaction_type": {
+                "type": "string",
+                "description": "交互类型",
+                "enum": ["invoke", "stream", "collect", "transform"]
+              },
+              "option_package_path": {
+                "type": "string",
+                "description": "选项包路径"
+              },
+              "option_type_name": {
+                "type": "string",
+                "description": "选项类型名称"
+              }
+            },
+            "required": ["interaction_type", "has_option"]
+          },
+          "extra_property_input": "{\"interaction_type\":\"invoke\"}"
+        },
+        "is_io_type_mutable": true,
+        "version": "1.0.0"
+      },
+      "layoutData": {
+        "position": {
+          "x": 200,
+          "y": 400
+        }
+      }
+    },
+    {
+      "id": "deep_judgment_template",
+      "key": "deep_judgment_template",
+      "name": "深度研判模板",
+      "type": "ChatTemplate",
+      "component_schema": {
+        "name": "chatTemplate",
+        "component": "ChatTemplate",
+        "component_source": "official",
+        "identifier": "github.com/cloudwego/eino/components/prompt",
+        "input_type": {
+          "title": "map[string]any",
+          "description": "深度研判模板输入"
+        },
+        "output_type": {
+          "title": "[]*schema.Message",
+          "description": "深度研判模板输出"
+        },
+        "config": {
+          "description": "github.com/cloudwego/eino/blob/main/components/prompt/chat_template.go",
+          "schema": {
+            "type": "object",
+            "description": "深度研判模板配置",
+            "properties": {
+              "FormatType": {
+                "type": "number",
+                "description": "格式化类型",
+                "enum": ["0", "1", "2"],
+                "goDefinition": {
+                  "libraryRef": {
+                    "version": "",
+                    "module": "",
+                    "pkgPath": ""
+                  },
+                  "typeName": "schema.FormatType",
+                  "kind": "uint8",
+                  "isPtr": false
+                }
+              }
+            },
+            "propertyOrder": ["FormatType"],
+            "goDefinition": {
+              "libraryRef": {
+                "version": "",
+                "module": "",
+                "pkgPath": ""
+              },
+              "typeName": "Config",
+              "kind": "struct",
+              "isPtr": false
+            }
+          },
+          "config_input": "{}"
+        },
+        "is_io_type_mutable": false,
+        "version": "1.0.0"
+      },
+      "layoutData": {
+        "position": {
+          "x": 400,
+          "y": 400
+        }
+      }
+    },
+    {
+      "id": "deep_judgment_model",
+      "key": "deep_judgment_model",
+      "name": "深度研判模型",
+      "type": "ChatModel",
+      "component_schema": {
+        "name": "openai",
+        "component": "ChatModel",
+        "component_source": "official",
+        "identifier": "github.com/cloudwego/eino-ext/components/model/openai",
+        "input_type": {
+          "title": "[]*schema.Message",
+          "description": "深度研判模型输入"
+        },
+        "output_type": {
+          "title": "*schema.Message",
+          "description": "深度研判模型输出"
+        },
+        "config": {
+          "description": "github.com/cloudwego/eino-ext/blob/main/components/model/openai/chatmodel.go",
+          "schema": {
+            "type": "object",
+            "description": "深度研判模型配置",
+            "properties": {
+              "APIKey": {
+                "type": "string",
+                "description": "API密钥",
+                "goDefinition": {
+                  "libraryRef": {
+                    "version": "",
+                    "module": "",
+                    "pkgPath": ""
+                  },
+                  "typeName": "string",
+                  "kind": "string",
+                  "isPtr": false
+                }
+              },
+              "Model": {
+                "type": "string",
+                "description": "模型名称",
+                "goDefinition": {
+                  "libraryRef": {
+                    "version": "",
+                    "module": "",
+                    "pkgPath": ""
+                  },
+                  "typeName": "string",
+                  "kind": "string",
+                  "isPtr": false
+                }
+              }
+            },
+            "propertyOrder": ["APIKey", "Model"],
+            "goDefinition": {
+              "libraryRef": {
+                "version": "",
+                "module": "",
+                "pkgPath": ""
+              },
+              "typeName": "openai.ChatModelConfig",
+              "kind": "struct",
+              "isPtr": false
+            }
+          },
+          "config_input": ""
+        },
+        "is_io_type_mutable": false,
+        "version": "1.0.0"
+      },
+      "layoutData": {
+        "position": {
+          "x": 600,
+          "y": 400
+        }
+      }
+    },
+    {
+      "id": "deep_judgment_lambda",
+      "key": "deep_judgment_lambda",
+      "name": "深度研判转换",
+      "type": "Lambda",
+      "component_schema": {
+        "name": "Lambda",
+        "component": "Lambda",
+        "component_source": "custom",
+        "input_type": {
+          "title": "ChatModelResult",
+          "description": "深度研判模型结果"
+        },
+        "output_type": {
+          "title": "*models.DeepJudgmentResult",
+          "description": "深度研判结果"
+        },
+        "extra_property": {
+          "schema": {
+            "type": "object",
+            "description": "Lambda配置",
+            "properties": {
+              "has_option": {
+                "type": "boolean",
+                "description": "是否有选项"
+              },
+              "interaction_type": {
+                "type": "string",
+                "description": "交互类型",
+                "enum": ["invoke", "stream", "collect", "transform"]
+              },
+              "option_package_path": {
+                "type": "string",
+                "description": "选项包路径"
+              },
+              "option_type_name": {
+                "type": "string",
+                "description": "选项类型名称"
+              }
+            },
+            "required": ["interaction_type", "has_option"]
+          },
+          "extra_property_input": "{\"interaction_type\":\"invoke\"}"
+        },
+        "is_io_type_mutable": true,
+        "version": "1.0.0"
+      },
+      "layoutData": {
+        "position": {
+          "x": 800,
+          "y": 400
+        }
+      }
+    },
+    {
+      "id": "deep_unified_result_integration",
+      "key": "deep_unified_result_integration",
+      "name": "深度结果整合",
+      "type": "Lambda",
+      "component_schema": {
+        "name": "Lambda",
+        "component": "Lambda",
+        "component_source": "custom",
+        "input_type": {
+          "title": "DeepUnifiedIntegrationInput",
+          "description": "深度结果整合输入"
+        },
+        "output_type": {
+          "title": "models.AlertResponse",
+          "description": "最终告警响应结果"
+        },
+        "extra_property": {
+          "schema": {
+            "type": "object",
+            "description": "Lambda配置",
+            "properties": {
+              "has_option": {
+                "type": "boolean",
+                "description": "是否有选项"
+              },
+              "interaction_type": {
+                "type": "string",
+                "description": "交互类型",
+                "enum": ["invoke", "stream", "collect", "transform"]
+              },
+              "option_package_path": {
+                "type": "string",
+                "description": "选项包路径"
+              },
+              "option_type_name": {
+                "type": "string",
+                "description": "选项类型名称"
+              }
+            },
+            "required": ["interaction_type", "has_option"]
+          },
+          "extra_property_input": "{\"interaction_type\":\"invoke\"}"
+        },
+        "is_io_type_mutable": true,
+        "version": "1.0.0"
+      },
+      "layoutData": {
+        "position": {
+          "x": 1000,
+          "y": 50
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "start",
+      "targetWorkflowNodeId": "alert_parser_template",
+      "source_node_key": "start",
+      "target_node_key": "alert_parser_template"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "alert_parser_template",
+      "targetWorkflowNodeId": "alert_parser_model",
+      "source_node_key": "alert_parser_template",
+      "target_node_key": "alert_parser_model"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "alert_parser_model",
+      "targetWorkflowNodeId": "alert_parser_lambda",
+      "source_node_key": "alert_parser_model",
+      "target_node_key": "alert_parser_lambda"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "alert_parser_lambda",
+      "targetWorkflowNodeId": "use_tool_template",
+      "source_node_key": "alert_parser_lambda",
+      "target_node_key": "use_tool_template"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "use_tool_template",
+      "targetWorkflowNodeId": "use_tool_model",
+      "source_node_key": "use_tool_template",
+      "target_node_key": "use_tool_model"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "use_tool_model",
+      "targetWorkflowNodeId": "use_tool_node",
+      "source_node_key": "use_tool_model",
+      "target_node_key": "use_tool_node"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "alert_parser_lambda",
+      "targetWorkflowNodeId": "knowledge_retrieval",
+      "source_node_key": "alert_parser_lambda",
+      "target_node_key": "knowledge_retrieval"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "use_tool_node",
+      "targetWorkflowNodeId": "initial_judgment_template",
+      "source_node_key": "use_tool_node",
+      "target_node_key": "initial_judgment_template"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "alert_parser_model",
+      "targetWorkflowNodeId": "initial_judgment_template",
+      "source_node_key": "alert_parser_model",
+      "target_node_key": "initial_judgment_template"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "knowledge_retrieval",
+      "targetWorkflowNodeId": "initial_judgment_template",
+      "source_node_key": "knowledge_retrieval",
+      "target_node_key": "initial_judgment_template"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "initial_judgment_template",
+      "targetWorkflowNodeId": "initial_judgment_model",
+      "source_node_key": "initial_judgment_template",
+      "target_node_key": "initial_judgment_model"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "initial_judgment_model",
+      "targetWorkflowNodeId": "initial_judgment_lambda",
+      "source_node_key": "initial_judgment_model",
+      "target_node_key": "initial_judgment_lambda"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "initial_judgment_lambda",
+      "targetWorkflowNodeId": "initial_unified_result_integration",
+      "source_node_key": "initial_judgment_lambda",
+      "target_node_key": "initial_unified_result_integration"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "alert_parser_lambda",
+      "targetWorkflowNodeId": "initial_unified_result_integration",
+      "source_node_key": "alert_parser_lambda",
+      "target_node_key": "initial_unified_result_integration"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "alert_parser_model",
+      "targetWorkflowNodeId": "initial_unified_result_integration",
+      "source_node_key": "alert_parser_model",
+      "target_node_key": "initial_unified_result_integration"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "use_tool_node",
+      "targetWorkflowNodeId": "initial_unified_result_integration",
+      "source_node_key": "use_tool_node",
+      "target_node_key": "initial_unified_result_integration"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "knowledge_retrieval",
+      "targetWorkflowNodeId": "initial_unified_result_integration",
+      "source_node_key": "knowledge_retrieval",
+      "target_node_key": "initial_unified_result_integration"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "start",
+      "targetWorkflowNodeId": "initial_unified_result_integration",
+      "source_node_key": "start",
+      "target_node_key": "initial_unified_result_integration"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "use_tool_model",
+      "targetWorkflowNodeId": "initial_unified_result_integration",
+      "source_node_key": "use_tool_model",
+      "target_node_key": "initial_unified_result_integration"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "initial_unified_result_integration",
+      "targetWorkflowNodeId": "initial_result_recieve",
+      "source_node_key": "initial_unified_result_integration",
+      "target_node_key": "initial_result_recieve"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "initial_result_recieve",
+      "targetWorkflowNodeId": "deep_judgment_template",
+      "source_node_key": "initial_result_recieve",
+      "target_node_key": "deep_judgment_template"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "deep_judgment_template",
+      "targetWorkflowNodeId": "deep_judgment_model",
+      "source_node_key": "deep_judgment_template",
+      "target_node_key": "deep_judgment_model"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "deep_judgment_model",
+      "targetWorkflowNodeId": "deep_judgment_lambda",
+      "source_node_key": "deep_judgment_model",
+      "target_node_key": "deep_judgment_lambda"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "initial_unified_result_integration",
+      "targetWorkflowNodeId": "deep_unified_result_integration",
+      "source_node_key": "initial_unified_result_integration",
+      "target_node_key": "deep_unified_result_integration"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "deep_judgment_lambda",
+      "targetWorkflowNodeId": "deep_unified_result_integration",
+      "source_node_key": "deep_judgment_lambda",
+      "target_node_key": "deep_unified_result_integration"
+    },
+    {
+      "id": "",
+      "name": "",
+      "sourceWorkflowNodeId": "deep_unified_result_integration",
+      "targetWorkflowNodeId": "end",
+      "source_node_key": "deep_unified_result_integration",
+      "target_node_key": "end"
+    }
+  ],
+  "branches": [
+    {
+      "id": "initial_unified_result_integration",
+      "condition": {},
+      "sourceWorkflowNodeId": "initial_unified_result_integration",
+      "targetWorkflowNodeIds": ["deep_judgment_template", "end"],
+      "source_node_key": "initial_unified_result_integration",
+      "target_node_keys": ["deep_judgment_template", "end"],
+      "layoutData": {
+        "position": {
+          "x": 900,
+          "y": 300
+        }
+      }
+    }
+  ],
+  "nodeCounter": {
+    "ChatTemplate": 4,
+    "ChatModel": 4,
+    "Lambda": 7,
+    "Tools": 1,
+    "Branch": 1,
+    "default": 2
+  }
+}

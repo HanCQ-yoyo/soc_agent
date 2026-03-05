@@ -1,0 +1,6 @@
+configs/config_dev.yaml
+logs/*
+bin/*
+soc_agent
+.DS_Store
+.clinerules
