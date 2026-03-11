@@ -121,7 +121,7 @@ func (r *AlertFeedbackRepo) DeleteFeedback(feedbackID string) error {
 	defer cancel()
 
 	filter := bson.M{
-		"_id": feedbackID,
+		"feedback_uid": feedbackID,
 	}
 
 	col := r.client.GetCollection(CollectionAlertFeedback)
@@ -144,7 +144,7 @@ func (r *AlertFeedbackRepo) UpdateFeedback(feedbackID string, update bson.M) err
 	defer cancel()
 
 	filter := bson.M{
-		"_id": feedbackID,
+		"feedback_uid": feedbackID,
 	}
 
 	col := r.client.GetCollection(CollectionAlertFeedback)
@@ -167,7 +167,7 @@ func (r *AlertFeedbackRepo) GetFeedbackByID(feedbackID string) (*models.AlertFee
 	defer cancel()
 
 	filter := bson.M{
-		"_id": feedbackID,
+		"feedback_uid": feedbackID,
 	}
 
 	col := r.client.GetCollection(CollectionAlertFeedback)

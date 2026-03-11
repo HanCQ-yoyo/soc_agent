@@ -4,3 +4,4 @@ bin/*
 soc_agent
 .DS_Store
 .clinerules
+memory

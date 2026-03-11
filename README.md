@@ -117,6 +117,15 @@ flowchart TD
 
 ### Configuration
 
+#### Configuration Files
+
+The SOC Agent supports multiple configuration files for different environments. By default, the system uses `config.yaml`, but you can create environment-specific configuration files to suit different deployment scenarios:
+
+- `config.yaml` - Default configuration
+- `config_dev.yaml` - Development environment configuration
+- `config_test.yaml` - Test environment configuration
+- `config_prod.yaml` - Production environment configuration
+
 #### config.yaml Example
 ```yaml
 # Server configuration
@@ -153,6 +162,57 @@ mcp:
   api_key: "your-api-key"
   base_url: "https://api.example.com"
 ```
+
+#### Switching Between Configuration Files
+
+The SOC Agent uses the `SOC_AGENT_ENV` environment variable to determine which configuration file to use. Here's how to switch between different configurations:
+
+1. **Using Makefile Targets** (Recommended):
+   - `make run` - Run with default configuration
+   - `make run-dev` - Run with development configuration
+   - `make run-test` - Run with test configuration
+   - `make run-prod` - Run with production configuration
+
+2. **Using Environment Variable Directly**:
+   ```bash
+   # Run with development configuration
+   SOC_AGENT_ENV=dev go run cmd/server/main.go
+   
+   # Run with test configuration
+   SOC_AGENT_ENV=test go run cmd/server/main.go
+   
+   # Run with production configuration
+   SOC_AGENT_ENV=production go run cmd/server/main.go
+   ```
+
+#### When to Use Different Configurations
+
+- **Development** (`config_dev.yaml`):
+  - Use for local development and testing
+  - Enables debug logging
+  - Uses development-specific database instances
+  - May use different API keys for testing
+
+- **Test** (`config_test.yaml`):
+  - Use for automated testing
+  - Uses test-specific database instances
+  - May use mock services for external dependencies
+
+- **Production** (`config_prod.yaml`):
+  - Use for production deployments
+  - Enables production-level logging
+  - Uses production database instances
+  - Uses real API keys and services
+
+#### Troubleshooting Configuration Switching
+
+- **Configuration file not found**: If you see a message like "Config file config_[env].yaml not found, using default config.yaml", it means the specified environment configuration file doesn't exist. The system will automatically fall back to using `config.yaml`.
+
+- **Environment variable not recognized**: Ensure you're setting the environment variable correctly. On Linux/macOS, use `export SOC_AGENT_ENV=dev` before running the application. On Windows, use `set SOC_AGENT_ENV=dev`.
+
+- **Configuration values not being applied**: Make sure you're restarting the application after changing the configuration. The application reads the configuration only at startup.
+
+- **Invalid configuration format**: Check that your YAML files are properly formatted. Use a YAML validator to ensure there are no syntax errors.
 
 ## Usage
 

@@ -8,4 +8,6 @@ const (
 	FieldUIDPrefixAlertFeature   FieldUIDPrefix = "alert_feature_"
 	MilvusVectorFieldUIDPrefix   FieldUIDPrefix = "milvus_vector_"
 	PromptTemplateFieldUIDPrefix FieldUIDPrefix = "prompt_template_"
+	ChatSessionFieldUIDPrefix    FieldUIDPrefix = "chat_session_"
+	ChatMessageFieldUIDPrefix    FieldUIDPrefix = "chat_msg_"
 )

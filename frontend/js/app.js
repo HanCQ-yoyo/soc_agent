@@ -5086,6 +5086,9 @@ function renderHistoryList() {
                 <button class="btn btn-secondary view-detail-btn" data-id="${analysisID}">
                     详情
                 </button>
+                <button class="btn btn-primary ai-assistant-btn" data-id="${analysisID}">
+                    AI助手
+                </button>
             </td>
         `;
         
@@ -5094,6 +5097,33 @@ function renderHistoryList() {
         if (viewDetailBtn && analysisID) {
             viewDetailBtn.addEventListener('click', () => {
                 viewHistoryDetail(analysisID);
+            });
+        }
+        
+        // 添加AI助手事件
+        const aiAssistantBtn = row.querySelector('.ai-assistant-btn');
+        if (aiAssistantBtn && analysisID) {
+            aiAssistantBtn.addEventListener('click', () => {
+                // 构建告警数据
+                const alertData = {
+                    alert_id: analysisID,
+                    alert_name: alertName,
+                    alert_level: 'high', // 默认为高风险
+                    alert_source: alertSource,
+                    alert_asset_id: alertAssetId,
+                    alert_asset_type: alertAssetType,
+                    alert_source_ip: sourceIp,
+                    alert_source_port: sourcePort,
+                    alert_destination_ip: destinationIp,
+                    alert_destination_port: destinationPort,
+                    alert_direction: alertDirection,
+                    analysis_result_type: resultType
+                };
+                
+                // 调用加载告警到聊天的函数
+                if (typeof loadAlertToChat !== 'undefined') {
+                    loadAlertToChat(alertData, analysisID);
+                }
             });
         }
         
@@ -7083,4 +7113,3 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
-

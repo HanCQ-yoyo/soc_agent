@@ -3,6 +3,7 @@ package handlers
 import (
 	"soc_agent/internal/agent"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,6 +11,15 @@ import (
 func SetupRouter(agent *agent.SOCAgent) *gin.Engine {
 	// 创建Gin引擎
 	r := gin.Default()
+
+	// 配置CORS中间件
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
 
 	// 创建告警处理器
 	alertHandler := NewAlertHandler(agent)
@@ -19,6 +29,8 @@ func SetupRouter(agent *agent.SOCAgent) *gin.Engine {
 	promptHandler := NewPromptTemplateHandler(agent.PromptTemplateRepo)
 	// 创建向量库处理器
 	vectorHandler := NewVectorHandler(agent.AlertAnalysisRepo, agent.Milvus)
+	// 创建聊天处理器
+	chatHandler := NewChatHandler(agent)
 
 	// API路由组
 	api := r.Group("/api/v1")
@@ -68,6 +80,17 @@ func SetupRouter(agent *agent.SOCAgent) *gin.Engine {
 		// 知识库检索路由
 		api.POST("/vector/search", vectorHandler.GetAllVectorData)
 		api.POST("/vector/search/analysis", vectorHandler.SearchByAnalysisID)
+
+		// 模型聊天路由
+		// api.POST("/chat/message", alertHandler.HandleChatMessage)
+
+		// 聊天会话管理路由
+		api.POST("/chat/sessions", chatHandler.CreateChatSession)       // 创建对话会话
+		api.GET("/chat/sessions", chatHandler.ListChatSessions)         // 获取对话会话列表
+		api.GET("/chat/sessions/:id", chatHandler.GetChatSession)       // 获取对话会话详情
+		api.DELETE("/chat/sessions/:id", chatHandler.DeleteChatSession) // 删除对话会话
+		api.POST("/chat/messages", chatHandler.SendMessage)             // 发送消息
+		api.POST("/chat/alert/query", chatHandler.QueryAlertInfo)       // 查询告警信息
 	}
 
 	// 为CSS和JS目录提供静态文件服务
@@ -76,7 +99,8 @@ func SetupRouter(agent *agent.SOCAgent) *gin.Engine {
 	r.Static("/js", "./frontend/js")
 
 	// 为根路径提供index.html文件
-	r.StaticFile("/", "./frontend/index.html")
+	r.StaticFile("/", "./frontend/index_old.html")
+	r.StaticFile("/old", "./frontend/index_old.html")
 	// 为所有其他路径提供index.html文件，支持前端路由
 	r.NoRoute(func(c *gin.Context) {
 		c.File("./frontend/index.html")

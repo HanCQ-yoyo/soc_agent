@@ -1,0 +1,1 @@
+console.log('Testing modal access'); const modal = document.getElementById('newSessionModal'); console.log('Modal element:', modal); if (modal) { modal.style.display = 'block'; console.log('Modal displayed'); } else { console.log('Modal not found'); }

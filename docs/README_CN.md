@@ -117,6 +117,15 @@ flowchart TD
 
 ### 配置
 
+#### 配置文件
+
+安全运营智能体支持多个不同环境的配置文件。默认情况下，系统使用 `config.yaml`，但您可以创建特定环境的配置文件以适应不同的部署场景：
+
+- `config.yaml` - 默认配置
+- `config_dev.yaml` - 开发环境配置
+- `config_test.yaml` - 测试环境配置
+- `config_prod.yaml` - 生产环境配置
+
 #### config.yaml 示例
 ```yaml
 # 服务器配置
@@ -153,6 +162,57 @@ mcp:
   api_key: "your-api-key"
   base_url: "https://api.example.com"
 ```
+
+#### 切换配置文件
+
+安全运营智能体使用 `SOC_AGENT_ENV` 环境变量来确定使用哪个配置文件。以下是如何在不同配置之间切换的方法：
+
+1. **使用 Makefile 目标**（推荐）：
+   - `make run` - 使用默认配置运行
+   - `make run-dev` - 使用开发环境配置运行
+   - `make run-test` - 使用测试环境配置运行
+   - `make run-prod` - 使用生产环境配置运行
+
+2. **直接使用环境变量**：
+   ```bash
+   # 使用开发环境配置运行
+   SOC_AGENT_ENV=dev go run cmd/server/main.go
+   
+   # 使用测试环境配置运行
+   SOC_AGENT_ENV=test go run cmd/server/main.go
+   
+   # 使用生产环境配置运行
+   SOC_AGENT_ENV=production go run cmd/server/main.go
+   ```
+
+#### 何时使用不同的配置
+
+- **开发** (`config_dev.yaml`)：
+  - 用于本地开发和测试
+  - 启用调试日志
+  - 使用开发专用的数据库实例
+  - 可能使用不同的测试 API 密钥
+
+- **测试** (`config_test.yaml`)：
+  - 用于自动化测试
+  - 使用测试专用的数据库实例
+  - 可能使用模拟服务作为外部依赖
+
+- **生产** (`config_prod.yaml`)：
+  - 用于生产部署
+  - 启用生产级日志
+  - 使用生产数据库实例
+  - 使用真实的 API 密钥和服务
+
+#### 配置切换故障排除
+
+- **配置文件未找到**：如果您看到类似 "Config file config_[env].yaml not found, using default config.yaml" 的消息，这意味着指定的环境配置文件不存在。系统会自动回退到使用 `config.yaml`。
+
+- **环境变量未被识别**：确保您正确设置了环境变量。在 Linux/macOS 上，在运行应用程序之前使用 `export SOC_AGENT_ENV=dev`。在 Windows 上，使用 `set SOC_AGENT_ENV=dev`。
+
+- **配置值未被应用**：确保您在更改配置后重新启动应用程序。应用程序仅在启动时读取配置。
+
+- **配置格式无效**：检查您的 YAML 文件是否格式正确。使用 YAML 验证器确保没有语法错误。
 
 ### 第三方组件安装
 

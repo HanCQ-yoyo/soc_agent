@@ -7,6 +7,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/cloudwego/eino/callbacks"
 	"github.com/cloudwego/eino/schema"
+	"github.com/sirupsen/logrus"
 
 	"soc_agent/internal/storage/mongo"
 )
@@ -26,7 +27,8 @@ func (l *loggerCallbacks) OnStart(ctx context.Context, info *callbacks.RunInfo, 
 
 	// 使用alertAnalysisRepo
 	if l.alertAnalysisRepo != nil {
-		err = l.alertAnalysisRepo.RecordWorkflowLog(l.analysisID, info.Name, info.Type, string(info.Component), inputStr, "", "")
+		err = l.alertAnalysisRepo.RecordWorkflowLog(l.analysisID, info.Name,
+			info.Type, string(info.Component), inputStr, "", "")
 	}
 
 	if err != nil {
@@ -37,20 +39,25 @@ func (l *loggerCallbacks) OnStart(ctx context.Context, info *callbacks.RunInfo, 
 }
 
 func (l *loggerCallbacks) OnEnd(ctx context.Context, info *callbacks.RunInfo, output callbacks.CallbackOutput) context.Context {
-	// fmt.Printf("name: %v, type: %v, component: %v, output: %v", info.Name, info.Type, info.Component, output)
-	outputStr, err := sonic.MarshalString(output)
-	if err != nil {
-		return ctx
-	}
+	go func() {
+		// fmt.Printf("name: %v, type: %v, component: %v, output: %v", info.Name, info.Type, info.Component, output)
+		outputStr, err := sonic.MarshalString(output)
+		if err != nil {
+			logrus.Errorf("Failed to marshal output: %v", err)
+			return
+		}
 
-	// 使用alertAnalysisRepo
-	if l.alertAnalysisRepo != nil {
-		err = l.alertAnalysisRepo.RecordWorkflowLog(l.analysisID, info.Name, info.Type, string(info.Component), "", outputStr, "")
-	}
+		// 使用alertAnalysisRepo
+		if l.alertAnalysisRepo != nil {
+			err = l.alertAnalysisRepo.RecordWorkflowLog(l.analysisID, info.Name,
+				info.Type, string(info.Component), "", outputStr, "")
+		}
 
-	if err != nil {
-		return ctx
-	}
+		if err != nil {
+			logrus.Errorf("Failed to record workflow log: %v", err)
+			return
+		}
+	}()
 	return ctx
 }
 

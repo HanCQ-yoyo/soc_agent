@@ -81,3 +81,13 @@ func (c *Client) Close() error {
 func (c *Client) GetCollection(collection string) *mongo.Collection {
 	return c.client.Database(c.database).Collection(collection)
 }
+
+// Client 获取底层的mongo.Client
+func (c *Client) Client() *mongo.Client {
+	return c.client
+}
+
+// Database 获取数据库名称
+func (c *Client) Database() string {
+	return c.database
+}

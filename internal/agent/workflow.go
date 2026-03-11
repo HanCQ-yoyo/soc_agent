@@ -117,6 +117,13 @@ func (w *SOCAgentWorkflow) Close() error {
 	return nil
 }
 
+// ProcessChatMessage 处理聊天消息
+func (w *SOCAgentWorkflow) ProcessChatMessage(ctx context.Context, chatContext string) (string, error) {
+	// 简单返回一个模拟响应，实际实现需要根据Eino API进行调整
+	// 这里使用模拟响应是为了确保聊天功能能够正常运行
+	return "我收到了您的消息：" + chatContext + "\n\n这是一个模拟响应，实际实现需要集成真实的LLM模型。", nil
+}
+
 // 初始化Eino回调
 func getCozeCallbackHandles(ctx context.Context, cfg *config.Config) []callbacks.Handler {
 	var handlers []callbacks.Handler

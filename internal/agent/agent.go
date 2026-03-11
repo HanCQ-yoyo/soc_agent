@@ -29,6 +29,7 @@ type SOCAgent struct {
 	AlertFeatureRepo   *mongo.AlertFeatureRepo
 	DashboardRepo      *mongo.DashboardRepo
 	PromptTemplateRepo *mongo.PromptTemplateRepo
+	ChatRepo           *mongo.ChatRepo
 }
 
 // NewSOCAgent 创建智能体实例
@@ -36,24 +37,29 @@ func NewSOCAgent(ctx context.Context) (*SOCAgent, error) {
 	// 创建配置
 	cfg := config.GetConfig()
 
-	// 创建Milvus客户端
-	milvus, err := milvus.NewClient(cfg)
+	// 创建Milvus客户端（可选）
+	var milvusClient *milvus.MilvusClient
+	var err error
+	milvusClient, err = milvus.NewClient(cfg)
 	if err != nil {
-		logrus.Errorf("Failed to create Milvus client: %v", err)
-		return nil, err
+		logrus.Warnf("Failed to create Milvus client: %v, continuing without Milvus", err)
+		milvusClient = nil
 	}
 
-	// 创建MongoDB客户端
-	mongoClient, err := mongo.NewClientFromConfig(cfg)
+	// 创建MongoDB客户端（可选）
+	var mongoClient *mongo.Client
+	mongoClient, err = mongo.NewClientFromConfig(cfg)
 	if err != nil {
-		logrus.Errorf("Failed to create MongoDB client: %v", err)
-		return nil, err
+		logrus.Warnf("Failed to create MongoDB client: %v, continuing without MongoDB", err)
 	}
 
-	// 创建工作流
-	workflow, err := NewSOCAgentWorkflow(ctx, milvus, mongoClient)
-	if err != nil {
-		return nil, err
+	// 创建工作流（可选）
+	var workflow *SOCAgentWorkflow
+	if milvusClient != nil && mongoClient != nil {
+		workflow, err = NewSOCAgentWorkflow(ctx, milvusClient, mongoClient)
+		if err != nil {
+			logrus.Warnf("Failed to create workflow: %v, continuing without workflow", err)
+		}
 	}
 
 	// 创建存储库实例
@@ -62,6 +68,7 @@ func NewSOCAgent(ctx context.Context) (*SOCAgent, error) {
 	var dashboardRepo *mongo.DashboardRepo
 	var featureRepo *mongo.AlertFeatureRepo
 	var promptTemplateRepo *mongo.PromptTemplateRepo
+	var chatRepo *mongo.ChatRepo
 
 	if mongoClient != nil {
 		alertAnalysisRepo = mongo.NewAlertAnalysisRepo(mongoClient)
@@ -69,18 +76,20 @@ func NewSOCAgent(ctx context.Context) (*SOCAgent, error) {
 		dashboardRepo = mongo.NewDashboardRepo(mongoClient)
 		featureRepo = mongo.NewAlertFeatureRepo(mongoClient)
 		promptTemplateRepo = mongo.NewPromptTemplateRepo(mongoClient)
+		chatRepo = mongo.NewChatRepo(mongoClient)
 	}
 
 	return &SOCAgent{
 		Cfg:                cfg,
 		Workflow:           workflow,
-		Milvus:             milvus,
+		Milvus:             milvusClient,
 		MongoClient:        mongoClient,
 		AlertAnalysisRepo:  alertAnalysisRepo,
 		AlertFeedbackRepo:  alertFeedbackRepo,
 		AlertFeatureRepo:   featureRepo,
 		DashboardRepo:      dashboardRepo,
 		PromptTemplateRepo: promptTemplateRepo,
+		ChatRepo:           chatRepo,
 	}, nil
 }
 

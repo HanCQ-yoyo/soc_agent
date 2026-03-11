@@ -64,6 +64,9 @@ func main() {
 		}
 	}()
 
+	// 打印服务器启动成功信息
+	logrus.Infof("Server started successfully on %s", serverAddr)
+
 	// 等待中断信号优雅关闭服务器
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
