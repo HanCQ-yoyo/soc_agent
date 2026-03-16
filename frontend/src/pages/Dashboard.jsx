@@ -38,40 +38,32 @@ const Dashboard = () => {
   const [categoryData, setCategoryData] = useState([]);
   const [sourceData, setSourceData] = useState([]);
 
-  const fetchDashboardStats = async (startDate, endDate) => {
-    const startTime = new Date(startDate).toISOString();
-    const endTime = new Date(endDate).toISOString();
-    const response = await fetch(`/api/v1/dashboard/overview?start_time=${startTime}&end_time=${endTime}`);
+  const fetchDashboardStats = async (timeRange) => {
+    const response = await fetch(`/api/v1/dashboard/overview?time_range=${timeRange}`);
     if (!response.ok) {
       throw new Error(`API调用失败 (${response.status})`);
     }
     return await response.json();
   };
 
-  const fetchDashboardTrend = async (startDate, endDate) => {
-    const startTime = new Date(startDate).toISOString();
-    const endTime = new Date(endDate).toISOString();
-    const response = await fetch(`/api/v1/dashboard/trend?start_time=${startTime}&end_time=${endTime}`);
+  const fetchDashboardTrend = async (timeRange) => {
+    const response = await fetch(`/api/v1/dashboard/trend?time_range=${timeRange}`);
     if (!response.ok) {
       throw new Error(`API调用失败 (${response.status})`);
     }
     return await response.json();
   };
 
-  const fetchDashboardCategory = async (startDate, endDate) => {
-    const startTime = new Date(startDate).toISOString();
-    const endTime = new Date(endDate).toISOString();
-    const response = await fetch(`/api/v1/dashboard/detail?start_time=${startTime}&end_time=${endTime}`);
+  const fetchDashboardCategory = async (timeRange) => {
+    const response = await fetch(`/api/v1/dashboard/detail?time_range=${timeRange}`);
     if (!response.ok) {
       throw new Error(`API调用失败 (${response.status})`);
     }
     return await response.json();
   };
 
-  const fetchDashboardSource = async (startDate, endDate) => {
-    const startTime = new Date(startDate).toISOString();
-    const endTime = new Date(endDate).toISOString();
-    const response = await fetch(`/api/v1/dashboard/efficiency?start_time=${startTime}&end_time=${endTime}`);
+  const fetchDashboardSource = async (timeRange) => {
+    const response = await fetch(`/api/v1/dashboard/efficiency?time_range=${timeRange}`);
     if (!response.ok) {
       throw new Error(`API调用失败 (${response.status})`);
     }
@@ -84,12 +76,15 @@ const Dashboard = () => {
     try {
       setLoading(true);
 
-      const startDate = dateRange?.[0]?.format('YYYY-MM-DD');
-      const endDate = dateRange?.[1]?.format('YYYY-MM-DD');
+      // 计算日期范围天数
+      const startDate = dateRange?.[0];
+      const endDate = dateRange?.[1];
+      const days = endDate && startDate ? endDate.diff(startDate, 'day') : 30;
+      const timeRange = `${days}days`;
 
       // 分别处理每个API调用，确保一个失败不影响其他
       try {
-        const statsResult = await fetchDashboardStats(startDate, endDate);
+        const statsResult = await fetchDashboardStats(timeRange);
         setStats({
           total: statsResult.total_alerts || 0,
           true_positive: statsResult.true_positive_count || 0,
@@ -103,7 +98,7 @@ const Dashboard = () => {
       }
 
       try {
-        const trendResult = await fetchDashboardTrend(startDate, endDate);
+        const trendResult = await fetchDashboardTrend(timeRange);
         if (Array.isArray(trendResult)) {
           const dates = trendResult.map(item => item.date);
           // 趋势数据只有总计数，我们使用它作为所有类型的数据源
@@ -123,7 +118,7 @@ const Dashboard = () => {
       }
 
       try {
-        const categoryResult = await fetchDashboardCategory(startDate, endDate);
+        const categoryResult = await fetchDashboardCategory(timeRange);
         if (categoryResult.result_type_distribution && Array.isArray(categoryResult.result_type_distribution)) {
           setCategoryData(categoryResult.result_type_distribution.map(item => ({
             name: item.name,
@@ -136,7 +131,7 @@ const Dashboard = () => {
       }
 
       try {
-        const sourceResult = await fetchDashboardCategory(startDate, endDate);
+        const sourceResult = await fetchDashboardSource(timeRange);
         if (sourceResult.alert_source_distribution && Array.isArray(sourceResult.alert_source_distribution)) {
           setSourceData(sourceResult.alert_source_distribution.map(item => ({
             name: item.name,

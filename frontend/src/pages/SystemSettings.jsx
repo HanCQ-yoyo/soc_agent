@@ -17,6 +17,7 @@ const SystemSettings = () => {
   const [promptHistory, setPromptHistory] = useState([]);
   const [promptForm] = Form.useForm();
   const [isEditing, setIsEditing] = useState(false);
+  const [publishStatus, setPublishStatus] = useState('draft');
 
   // 获取提示词列表
   const fetchPrompts = async () => {
@@ -27,7 +28,29 @@ const SystemSettings = () => {
         throw new Error(`API调用失败 (${response.status})`);
       }
       const result = await response.json();
-      setPrompts(result.data || []);
+      const promptsList = result.data || [];
+      
+      // 为每个提示词获取历史版本
+      const promptsWithVersions = await Promise.all(
+        promptsList.map(async (prompt) => {
+          try {
+            const versionResponse = await fetch(`/api/v1/prompt/template?prompt_template_key=${prompt.prompt_template_key}`);
+            if (versionResponse.ok) {
+              const versionResult = await versionResponse.json();
+              return {
+                ...prompt,
+                versions: versionResult.data || [],
+              };
+            }
+            return prompt;
+          } catch (error) {
+            console.error(`获取提示词 ${prompt.prompt_template_key} 的版本失败:`, error);
+            return prompt;
+          }
+        })
+      );
+      
+      setPrompts(promptsWithVersions);
     } catch (error) {
       console.error('获取提示词列表失败:', error);
       message.error('获取提示词列表失败: ' + error.message);
@@ -49,7 +72,9 @@ const SystemSettings = () => {
     promptForm.setFieldsValue({
       name: prompt.prompt_template_name,
       description: prompt.description,
-      content: prompt.system_message,
+      systemMessage: prompt.system_message,
+      userMessage: prompt.user_message,
+      assistantMessage: prompt.assistant_message,
     });
   };
 
@@ -61,7 +86,9 @@ const SystemSettings = () => {
     promptForm.setFieldsValue({
       name: prompt.prompt_template_name,
       description: prompt.description,
-      content: prompt.system_message,
+      systemMessage: prompt.system_message,
+      userMessage: prompt.user_message,
+      assistantMessage: prompt.assistant_message,
     });
   };
 
@@ -69,13 +96,17 @@ const SystemSettings = () => {
   const savePrompt = async (values) => {
     try {
       const url = '/api/v1/prompt/template';
-      const method = 'POST';
+      const method = 'PUT';
       
       const body = {
-        prompt_template_key: currentPrompt?.prompt_template_key || values.name,
-        prompt_template_name: values.name,
+        prompt_key: currentPrompt?.prompt_template_key || values.name,
+        prompt_name: values.name,
         description: values.description,
-        system_message: values.content,
+        system_message: values.systemMessage,
+        user_message: values.userMessage,
+        assistant_message: values.assistantMessage,
+        publish_status: publishStatus,
+        updated_by: 'admin',
       };
       
       const response = await fetch(url, {
@@ -93,6 +124,35 @@ const SystemSettings = () => {
       fetchPrompts();
     } catch (error) {
       message.error('保存失败: ' + error.message);
+    }
+  };
+
+  // 回滚版本
+  const rollbackVersion = async (prompt, version) => {
+    try {
+      const url = '/api/v1/prompt/template/rollback';
+      const method = 'PUT';
+      
+      const body = {
+        prompt_key: prompt.prompt_template_key,
+        version: version,
+        updated_by: 'admin',
+      };
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API调用失败 (${response.status})`);
+      }
+      
+      message.success('版本回滚成功');
+      fetchPrompts();
+    } catch (error) {
+      message.error('回滚失败: ' + error.message);
     }
   };
 
@@ -119,20 +179,12 @@ const SystemSettings = () => {
   // 查看提示词历史
   const viewPromptHistory = async (prompt) => {
     try {
-      const response = await fetch(`/api/v1/prompt/template/version/count?prompt_template_key=${prompt.prompt_template_key}`);
+      const response = await fetch(`/api/v1/prompt/template?prompt_template_key=${prompt.prompt_template_key}`);
       if (!response.ok) {
         throw new Error(`API调用失败 (${response.status})`);
       }
       const data = await response.json();
-      const history = [];
-      for (let i = 1; i <= (data.data?.count || 1); i++) {
-        history.push({
-          version: i,
-          created_at: new Date().toISOString(),
-          description: `版本 ${i}`,
-        });
-      }
-      setPromptHistory(history);
+      setPromptHistory(data.data || []);
       setPromptHistoryVisible(true);
     } catch (error) {
       message.error('获取历史版本失败: ' + error.message);
@@ -150,62 +202,65 @@ const SystemSettings = () => {
   // 提示词表格列定义
   const promptColumns = [
     {
-      title: '名称',
+      title: '模板KEY',
+      dataIndex: 'prompt_template_key',
+      key: 'prompt_template_key',
+      width: 150,
+      render: (text) => <span style={{ fontSize: '14px' }}>{text || '无'}</span>,
+    },
+    {
+      title: '模板名称',
       dataIndex: 'prompt_template_name',
       key: 'prompt_template_name',
       width: 200,
       render: (text) => <span style={{ fontSize: '14px' }}>{text || '无'}</span>,
     },
     {
-      title: '描述',
-      dataIndex: 'description',
-      key: 'description',
-      width: 350,
-      ellipsis: true,
-      render: (text) => <span style={{ fontSize: '14px' }}>{text || '无'}</span>,
-    },
-    {
-      title: '版本',
+      title: '版本数量',
       dataIndex: 'version',
-      key: 'version',
-      width: 80,
-      render: () => <Tag color="blue" style={{ fontSize: '13px' }}>v1</Tag>,
+      key: 'version_count',
+      width: 100,
+      render: (_, record) => <span style={{ fontSize: '14px' }}>{record.versions?.length || 1}</span>,
     },
     {
-      title: '更新时间',
-      dataIndex: 'updated_timestamp',
-      key: 'updated_timestamp',
+      title: '当前版本',
+      dataIndex: 'version',
+      key: 'current_version',
+      width: 100,
+      render: (version) => <span style={{ fontSize: '14px' }}>{version || 1}</span>,
+    },
+    {
+      title: '发布状态',
+      dataIndex: 'publish_status',
+      key: 'publish_status',
+      width: 100,
+      render: (status) => {
+        const statusMap = {
+          'active': <Tag color="green" style={{ fontSize: '13px' }}>已发布</Tag>,
+          'draft': <Tag color="orange" style={{ fontSize: '13px' }}>草稿</Tag>,
+        };
+        return statusMap[status] || <Tag style={{ fontSize: '13px' }}>{status || '无'}</Tag>;
+      },
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'created_timestamp',
+      key: 'created_timestamp',
       width: 200,
       render: (time) => <span style={{ fontSize: '14px' }}>{time ? new Date(time).toLocaleString('zh-CN') : '无'}</span>,
     },
     {
       title: '操作',
       key: 'action',
-      width: 250,
+      width: 200,
       render: (_, record) => (
         <Space style={{ fontSize: '14px' }}>
           <Button
             type="link"
-            icon={<EyeOutlined />}
-            onClick={() => viewPromptDetail(record)}
-            style={{ fontSize: '14px' }}
-          >
-            查看
-          </Button>
-          <Button
-            type="link"
-            icon={<EditOutlined />}
             onClick={() => editPrompt(record)}
             style={{ fontSize: '14px' }}
           >
-            编辑
-          </Button>
-          <Button
-            type="link"
-            icon={<HistoryOutlined />}
-            onClick={() => viewPromptHistory(record)}
-          >
-            历史
+            新建版本
           </Button>
           <Popconfirm
             title="确认删除"
@@ -217,7 +272,7 @@ const SystemSettings = () => {
             <Button
               type="link"
               danger
-              icon={<DeleteOutlined />}
+              style={{ fontSize: '14px' }}
             >
               删除
             </Button>
@@ -239,7 +294,7 @@ const SystemSettings = () => {
                 icon={<PlusOutlined />}
                 onClick={createNewPrompt}
               >
-                新建提示词
+                新建提示词模板
               </Button>
             }
             className="page-card"
@@ -253,6 +308,107 @@ const SystemSettings = () => {
               scroll={{ x: 1200, y: 'calc(100vh - 400px)' }}
               style={{ fontSize: '14px' }}
               rowStyle={{ padding: '8px 0' }}
+              expandable={{
+                expandedRowRender: (record) => {
+                  return (
+                    <div style={{ margin: '16px 0' }}>
+                      <Table
+                        columns={[
+                          {
+                            title: '版本号',
+                            dataIndex: 'version',
+                            key: 'version',
+                            width: 100,
+                            render: (version) => <span style={{ fontSize: '14px' }}>{version || 1}</span>,
+                          },
+                          {
+                            title: '模板名称',
+                            dataIndex: 'prompt_template_name',
+                            key: 'prompt_template_name',
+                            width: 200,
+                            render: (text) => <span style={{ fontSize: '14px' }}>{text || '无'}</span>,
+                          },
+                          {
+                            title: '描述',
+                            dataIndex: 'description',
+                            key: 'description',
+                            width: 300,
+                            ellipsis: true,
+                            render: (text) => <span style={{ fontSize: '14px' }}>{text || '无'}</span>,
+                          },
+                          {
+                            title: '发布状态',
+                            dataIndex: 'publish_status',
+                            key: 'publish_status',
+                            width: 100,
+                            render: (status) => {
+                              const statusMap = {
+                                'active': <Tag color="green" style={{ fontSize: '13px' }}>已发布</Tag>,
+                                'draft': <Tag color="orange" style={{ fontSize: '13px' }}>草稿</Tag>,
+                              };
+                              return statusMap[status] || <Tag style={{ fontSize: '13px' }}>{status || '无'}</Tag>;
+                            },
+                          },
+                          {
+                            title: '创建时间',
+                            dataIndex: 'created_timestamp',
+                            key: 'created_timestamp',
+                            width: 200,
+                            render: (time) => <span style={{ fontSize: '14px' }}>{time ? new Date(time).toLocaleString('zh-CN') : '无'}</span>,
+                          },
+                          {
+                            title: '操作',
+                            key: 'action',
+                            width: 150,
+                            render: (_, historyRecord) => (
+                              <Space style={{ fontSize: '14px' }}>
+                                <Button
+                                  type="link"
+                                  onClick={() => viewPromptDetail(historyRecord)}
+                                  style={{ fontSize: '14px' }}
+                                >
+                                  查看
+                                </Button>
+                                <Button
+                                  type="link"
+                                  onClick={() => rollbackVersion(historyRecord, historyRecord.version)}
+                                  style={{ fontSize: '14px' }}
+                                >
+                                  回滚
+                                </Button>
+                              </Space>
+                            ),
+                          },
+                        ]}
+                        dataSource={record.versions || []}
+                        rowKey="prompt_template_uid"
+                        scroll={{ x: 1100 }}
+                        style={{ fontSize: '14px' }}
+                        rowStyle={{ padding: '8px 0' }}
+                      />
+                    </div>
+                  );
+                },
+                onExpand: async (expanded, record) => {
+                  if (expanded) {
+                    try {
+                      const versionResponse = await fetch(`/api/v1/prompt/template?prompt_template_key=${record.prompt_template_key}`);
+                      if (versionResponse.ok) {
+                        const versionResult = await versionResponse.json();
+                        setPrompts(prevPrompts => 
+                          prevPrompts.map(prompt => 
+                            prompt.prompt_template_key === record.prompt_template_key
+                              ? { ...prompt, versions: versionResult.data || [] }
+                              : prompt
+                          )
+                        );
+                      }
+                    } catch (error) {
+                      console.error(`获取提示词 ${record.prompt_template_key} 的版本失败:`, error);
+                    }
+                  }
+                },
+              }}
             />
           </Card>
         </TabPane>
@@ -271,8 +427,11 @@ const SystemSettings = () => {
               <Button onClick={() => setPromptDrawerVisible(false)} style={{ marginRight: 8 }}>
                 取消
               </Button>
-              <Button type="primary" onClick={() => promptForm.submit()} icon={<SaveOutlined />}>
+              <Button onClick={() => { setPublishStatus('draft'); promptForm.submit(); }} style={{ marginRight: 8 }}>
                 保存
+              </Button>
+              <Button type="primary" onClick={() => { setPublishStatus('active'); promptForm.submit(); }} icon={<SaveOutlined />}>
+                保存并发布
               </Button>
             </div>
           )
@@ -298,13 +457,32 @@ const SystemSettings = () => {
             <Input placeholder="请输入提示词描述" />
           </Form.Item>
           <Form.Item
-            label="内容"
-            name="content"
-            rules={[{ required: true, message: '请输入提示词内容' }]}
+            label="系统角色提示词"
+            name="systemMessage"
           >
             <TextArea
-              rows={20}
-              placeholder="请输入提示词内容..."
+              rows={8}
+              placeholder="请输入系统角色提示词..."
+              style={{ fontFamily: "'Courier New', Courier, monospace" }}
+            />
+          </Form.Item>
+          <Form.Item
+            label="用户角色提示词"
+            name="userMessage"
+          >
+            <TextArea
+              rows={8}
+              placeholder="请输入用户角色提示词..."
+              style={{ fontFamily: "'Courier New', Courier, monospace" }}
+            />
+          </Form.Item>
+          <Form.Item
+            label="助手角色提示词"
+            name="assistantMessage"
+          >
+            <TextArea
+              rows={8}
+              placeholder="请输入助手角色提示词..."
               style={{ fontFamily: "'Courier New', Courier, monospace" }}
             />
           </Form.Item>
@@ -317,7 +495,7 @@ const SystemSettings = () => {
         placement="right"
         onClose={() => setPromptHistoryVisible(false)}
         open={promptHistoryVisible}
-        width={750}
+        width={1000}
       >
         {promptHistory.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
@@ -325,19 +503,80 @@ const SystemSettings = () => {
           </div>
         ) : (
           <div>
-            {promptHistory.map((history, index) => (
-              <Card key={index} size="small" style={{ marginBottom: '0.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <Tag color="blue">v{history.version}</Tag>
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>
-                    {new Date(history.created_at).toLocaleString('zh-CN')}
-                  </span>
-                </div>
-                <div style={{ fontSize: '12px', color: '#64748b' }}>
-                  {history.description || '无描述'}
-                </div>
-              </Card>
-            ))}
+            <Table
+              columns={[
+                {
+                  title: '版本号',
+                  dataIndex: 'version',
+                  key: 'version',
+                  width: 100,
+                  render: (version) => <span style={{ fontSize: '14px' }}>{version || 1}</span>,
+                },
+                {
+                  title: '模板名称',
+                  dataIndex: 'prompt_template_name',
+                  key: 'prompt_template_name',
+                  width: 200,
+                  render: (text) => <span style={{ fontSize: '14px' }}>{text || '无'}</span>,
+                },
+                {
+                  title: '描述',
+                  dataIndex: 'description',
+                  key: 'description',
+                  width: 300,
+                  ellipsis: true,
+                  render: (text) => <span style={{ fontSize: '14px' }}>{text || '无'}</span>,
+                },
+                {
+                  title: '发布状态',
+                  dataIndex: 'publish_status',
+                  key: 'publish_status',
+                  width: 100,
+                  render: (status) => {
+                    const statusMap = {
+                      'active': <Tag color="green" style={{ fontSize: '13px' }}>已发布</Tag>,
+                      'draft': <Tag color="orange" style={{ fontSize: '13px' }}>草稿</Tag>,
+                    };
+                    return statusMap[status] || <Tag style={{ fontSize: '13px' }}>{status || '无'}</Tag>;
+                  },
+                },
+                {
+                  title: '创建时间',
+                  dataIndex: 'created_timestamp',
+                  key: 'created_timestamp',
+                  width: 200,
+                  render: (time) => <span style={{ fontSize: '14px' }}>{time ? new Date(time).toLocaleString('zh-CN') : '无'}</span>,
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 150,
+                  render: (_, record) => (
+                    <Space style={{ fontSize: '14px' }}>
+                      <Button
+                        type="link"
+                        onClick={() => viewPromptDetail(record)}
+                        style={{ fontSize: '14px' }}
+                      >
+                        查看
+                      </Button>
+                      <Button
+                                  type="link"
+                                  onClick={() => rollbackVersion(record, record.version)}
+                                  style={{ fontSize: '14px' }}
+                                >
+                                  回滚
+                                </Button>
+                    </Space>
+                  ),
+                },
+              ]}
+              dataSource={promptHistory}
+              rowKey="prompt_template_uid"
+              scroll={{ x: 900 }}
+              style={{ fontSize: '14px' }}
+              rowStyle={{ padding: '8px 0' }}
+            />
           </div>
         )}
       </Drawer>
