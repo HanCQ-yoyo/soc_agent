@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Tag, Button, Space, Drawer, message, Pagination } from 'antd';
-import { EyeOutlined, ApartmentOutlined, CodeOutlined, AlertOutlined, CheckCircleOutlined, CloseCircleOutlined, AppstoreOutlined } from '@ant-design/icons';
+import { Card, Table, Tag, Button, Space, Drawer, message, Pagination, Tooltip } from 'antd';
+import { EyeOutlined, ApartmentOutlined, CodeOutlined, AlertOutlined, CheckCircleOutlined, CloseCircleOutlined, AppstoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 
 const TaskManagement = () => {
   const [tasks, setTasks] = useState([]);
@@ -101,14 +101,24 @@ const TaskManagement = () => {
   };
 
   // 获取任务状态标签
-  const getTaskStatusTag = (status, errorLog) => {
-    if (errorLog) {
-      return <Tag color="error">失败</Tag>;
+  const getTaskStatusTag = (status, errorLog, errMessage) => {
+    if (errorLog || status === 'failed') {
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <Tag color="error">失败</Tag>
+          {errMessage && (
+            <Tooltip title={errMessage} placement="top">
+              <ExclamationCircleOutlined style={{ color: '#ff4d4f', fontSize: '14px', cursor: 'help' }} />
+            </Tooltip>
+          )}
+        </div>
+      );
     }
     const statusMap = {
       success: { color: 'success', text: '成功' },
       processing: { color: 'processing', text: '处理中' },
       pending: { color: 'default', text: '待处理' },
+      running: { color: 'processing', text: '运行中' },
     };
     const statusInfo = statusMap[status] || { color: 'default', text: status };
     return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
@@ -406,6 +416,11 @@ const TaskManagement = () => {
       key: 'analysis_end_time',
       width: 250,
       render: (endTime, record) => {
+        // 检查是否为1970-01-01 08:00:00
+        const isEpochTime = endTime === '1970-01-01 08:00:00';
+        if (!endTime || isEpochTime) {
+          return <span style={{ fontSize: '14px' }}></span>;
+        }
         const duration = calculateDuration(record.analysis_start_time, endTime);
         return (
           <div style={{ fontSize: '14px' }}>
@@ -421,12 +436,18 @@ const TaskManagement = () => {
       title: '任务状态',
       dataIndex: 'disposal_status',
       key: 'disposal_status',
-      width: 120,
+      width: 150,
       render: (status, record) => {
         const actualStatus = status || record.status;
         const errorLog = record.err_message || record.error_log;
-        const tag = getTaskStatusTag(actualStatus, errorLog);
-        return React.cloneElement(tag, { style: { fontSize: '13px' } });
+        const errMessage = record.err_message || record.error_log;
+        const statusElement = getTaskStatusTag(actualStatus, errorLog, errMessage);
+        // 如果返回的是div（包含提示标识），直接返回
+        if (statusElement.type === 'div') {
+          return statusElement;
+        }
+        // 如果返回的是Tag，添加样式
+        return React.cloneElement(statusElement, { style: { fontSize: '13px' } });
       },
     },
     {

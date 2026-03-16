@@ -46,19 +46,57 @@ body {
 /* 页面头部 */
 .page-header {
   margin-bottom: 20px;
-  padding: 16px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 12px 20px;
+  background: rgba(26, 31, 46, 0.95);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.25);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.page-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 .breadcrumb {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.95);
+  color: #94a3b8;
   font-weight: 500;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breadcrumb span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breadcrumb span::before {
+  content: '/';
+  color: #475569;
+  margin: 0 4px;
+}
+
+.breadcrumb span:first-child::before {
+  display: none;
+}
+
+.breadcrumb span:last-child {
+  color: #e2e8f0;
+  font-weight: 600;
 }
 
 /* 页面卡片 */

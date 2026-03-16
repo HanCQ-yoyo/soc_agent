@@ -78,8 +78,8 @@ func SetupRouter(agent *agent.SOCAgent) *gin.Engine {
 		api.DELETE("/prompt/template", promptHandler.DeletePromptTemplate)             // 软删除提示词模板
 
 		// 知识库检索路由
-		api.POST("/vector/search", vectorHandler.GetAllVectorData)
 		api.POST("/vector/search/analysis", vectorHandler.SearchByAnalysisID)
+		api.POST("/vector/search", vectorHandler.GetAllVectorData)
 
 		// 模型聊天路由
 		// api.POST("/chat/message", alertHandler.HandleChatMessage)

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Tag, Button, Space, Drawer, Modal, message, Input, Select, DatePicker, Row, Col } from 'antd';
 import { EyeOutlined, RobotOutlined, MessageOutlined, DownloadOutlined, SearchOutlined, ReloadOutlined, CheckOutlined, CloseOutlined, ExclamationOutlined } from '@ant-design/icons';
+import Markdown from '@ant-design/x-markdown';
+
 import dayjs from 'dayjs';
 
 const { RangePicker } = DatePicker;
@@ -506,44 +508,80 @@ const AlertOperation = () => {
       >
         {currentAlert && currentAlert.detail && (
           <div>
-            <Card title="基本信息" style={{ marginBottom: '1rem' }}>
-              <p><strong>分析ID:</strong> {currentAlert.detail.analysis_id}</p>
-              <p><strong>告警名称:</strong> {currentAlert.detail.alert_name}</p>
-              <p><strong>告警来源:</strong> {currentAlert.detail.alert_source}</p>
-              <p><strong>告警类别:</strong> {currentAlert.detail.alert_category}</p>
-              <p><strong>严重程度:</strong> {getSeverityTag(currentAlert.detail.alert_severity)}</p>
-              <p><strong>研判时间:</strong> {formatTime(currentAlert.detail.analysis_end_time)}</p>
-              <p><strong>告警发生时间:</strong> {formatTime(currentAlert.detail.alert_event_timestamp)}</p>
-              <p><strong>告警UUID:</strong> {currentAlert.detail.alert_uuid}</p>
+            {/* 顶部操作区 */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              {/* 研判结果和置信度标签 - 放在顶部左侧 */}
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
+                  研判结果: {getResultTypeTag(currentAlert.detail.analysis_result_type)}
+                </div>
+                <Tag color="blue" style={{ fontSize: '14px', fontWeight: '500' }}>
+                  置信度: {Math.round((currentAlert.detail.analysis_confidence || 0) * 100)}%
+                </Tag>
+              </div>
+              
+              {/* 操作按钮 - 放在顶部右侧 */}
+              <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                <Button 
+                  type="primary" 
+                  icon={<MessageOutlined />}
+                  onClick={() => openFeedback(currentAlert)}
+                  size="middle"
+                >
+                  评估反馈
+                </Button>
+                <Button 
+                  type="default" 
+                  icon={<DownloadOutlined />}
+                  onClick={() => exportReport(currentAlert)}
+                  size="middle"
+                >
+                  导出报告
+                </Button>
+              </div>
+            </div>
+            
+            {/* 基本信息和网络信息 - 横向并排展示 */}
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+              <Card title="基本信息" style={{ flex: 1, borderLeft: '4px solid #1890ff' }}>
+                <p><strong>分析ID:</strong> {currentAlert.detail.analysis_id}</p>
+                <p><strong>告警名称:</strong> {currentAlert.detail.alert_name}</p>
+                <p><strong>告警来源:</strong> {currentAlert.detail.alert_source}</p>
+                <p><strong>告警类别:</strong> {currentAlert.detail.alert_category}</p>
+                <p><strong>严重程度:</strong> {getSeverityTag(currentAlert.detail.alert_severity)}</p>
+                <p><strong>研判时间:</strong> {formatTime(currentAlert.detail.analysis_end_time)}</p>
+                <p><strong>告警发生时间:</strong> {formatTime(currentAlert.detail.alert_event_timestamp)}</p>
+                <p><strong>告警UUID:</strong> {currentAlert.detail.alert_uuid}</p>
+              </Card>
+              
+              <Card title="网络信息" style={{ flex: 1, borderLeft: '4px solid #1890ff' }}>
+                <p><strong>源IP:</strong> {currentAlert.detail.alert_source_ip}</p>
+                <p><strong>目标IP:</strong> {currentAlert.detail.alert_destination_ip}</p>
+                <p><strong>目标端口:</strong> {currentAlert.detail.alert_destination_port}</p>
+                <p><strong>流量方向:</strong> {currentAlert.detail.alert_direction}</p>
+                <p><strong>资产类型:</strong> {currentAlert.detail.alert_asset_type}</p>
+              </Card>
+            </div>
+            
+            <Card title="处置建议" style={{ marginBottom: '1rem', borderLeft: '4px solid #1890ff' }}>
+              <Markdown style={{ fontSize: '14px' }}>
+                {currentAlert.detail.analysis_disposal_suggestion || '无'}
+              </Markdown>
             </Card>
             
-            <Card title="网络信息" style={{ marginBottom: '1rem' }}>
-              <p><strong>源IP:</strong> {currentAlert.detail.alert_source_ip}</p>
-              <p><strong>目标IP:</strong> {currentAlert.detail.alert_destination_ip}</p>
-              <p><strong>目标端口:</strong> {currentAlert.detail.alert_destination_port}</p>
-              <p><strong>流量方向:</strong> {currentAlert.detail.alert_direction}</p>
-              <p><strong>资产类型:</strong> {currentAlert.detail.alert_asset_type}</p>
+            <Card title="详细分析" style={{ marginBottom: '1rem', borderLeft: '4px solid #1890ff' }}>
+              <Markdown style={{ fontSize: '14px' }}>
+                {currentAlert.detail.analysis_deep_detail || '无'}
+              </Markdown>
             </Card>
             
-            <Card title="研判结果" style={{ marginBottom: '1rem' }}>
-              <p><strong>结果类型:</strong> {getResultTypeTag(currentAlert.detail.analysis_result_type)}</p>
-              <p><strong>置信度:</strong> {Math.round((currentAlert.detail.analysis_confidence || 0) * 100)}%</p>
-              <p><strong>结果描述:</strong> {currentAlert.detail.analysis_result_desc}</p>
+            <Card title="证据链" style={{ marginBottom: '1rem', borderLeft: '4px solid #1890ff' }}>
+              <Markdown style={{ fontSize: '14px' }}>
+                {currentAlert.detail.analysis_evidence_chain || '无'}
+              </Markdown>
             </Card>
             
-            <Card title="详细分析" style={{ marginBottom: '1rem' }}>
-              <pre style={{ whiteSpace: 'pre-wrap', fontSize: '12px' }}>
-                {currentAlert.detail.analysis_deep_detail}
-              </pre>
-            </Card>
-            
-            <Card title="处置建议" style={{ marginBottom: '1rem' }}>
-              <pre style={{ whiteSpace: 'pre-wrap', fontSize: '12px' }}>
-                {currentAlert.detail.analysis_disposal_suggestion}
-              </pre>
-            </Card>
-            
-            <Card title="相关IOCs" style={{ marginBottom: '1rem' }}>
+            <Card title="相关IOCs" style={{ marginBottom: '1rem', borderLeft: '4px solid #1890ff' }}>
               <ul style={{ listStyle: 'none', padding: 0 }}>
                 {currentAlert.detail.analysis_related_iocs && currentAlert.detail.analysis_related_iocs.map((ioc, index) => (
                   <li key={index} style={{ marginBottom: 4, padding: 4, background: '#f8fafc', borderRadius: 4 }}>
@@ -553,28 +591,11 @@ const AlertOperation = () => {
               </ul>
             </Card>
             
-            <Card title="告警描述" style={{ marginBottom: '1rem' }}>
+            <Card title="原始告警" style={{ marginBottom: '1rem', borderLeft: '4px solid #1890ff' }}>
               <pre style={{ whiteSpace: 'pre-wrap', fontSize: '12px' }}>
-                {currentAlert.detail.alert_description}
+                {currentAlert.detail.raw_data_alert || '无'}
               </pre>
             </Card>
-            
-            <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem' }}>
-              <Button 
-                type="primary" 
-                icon={<MessageOutlined />}
-                onClick={() => openFeedback(currentAlert)}
-              >
-                评估反馈
-              </Button>
-              <Button 
-                type="default" 
-                icon={<DownloadOutlined />}
-                onClick={() => exportReport(currentAlert)}
-              >
-                导出报告
-              </Button>
-            </div>
           </div>
         )}
       </Drawer>

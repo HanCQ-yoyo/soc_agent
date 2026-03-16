@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, message } from 'antd';
+import { Button, message, Modal } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import SessionList from '../components/SessionList';
 import ChatArea from '../components/ChatArea';
@@ -32,7 +32,7 @@ const ModelChat = () => {
         throw new Error('加载会话列表失败');
       }
       const result = await response.json();
-      const newSessions = result.items || [];
+      const newSessions = result.data?.items || [];
       
       if (isLoadMore) {
         setSessions(prev => [...prev, ...newSessions]);
@@ -73,14 +73,15 @@ const ModelChat = () => {
         throw new Error('获取会话详情失败');
       }
       const result = await response.json();
+      const sessionData = result.data || result;
       
       // 将会话详情存入缓存
       setSessionCache(prev => ({
         ...prev,
-        [sessionId]: result
+        [sessionId]: sessionData
       }));
       
-      setCurrentSession(result);
+      setCurrentSession(sessionData);
     } catch (error) {
       console.error('选择会话失败:', error);
       message.error('选择会话失败，请重试');
@@ -106,7 +107,7 @@ const ModelChat = () => {
         throw new Error('创建会话失败');
       }
       const result = await response.json();
-      const session = result;
+      const session = result.data || result;
       
       // 将会话添加到缓存中
       setSessionCache(prev => ({
@@ -127,33 +128,39 @@ const ModelChat = () => {
   };
 
   const deleteSession = async (sessionId) => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(`/api/v1/chat/sessions/${sessionId}`, {
-        method: 'DELETE'
-      });
-      if (!response.ok) {
-        throw new Error('删除会话失败');
-      }
-      
-      // 从缓存中移除会话
-      setSessionCache(prev => {
-        const newCache = { ...prev };
-        delete newCache[sessionId];
-        return newCache;
-      });
-      
-      setSessions(prev => prev.filter(session => session.session_id !== sessionId));
-      if (currentSession && currentSession.session_id === sessionId) {
-        setCurrentSession(sessions.length > 1 ? sessions[0] : null);
-      }
-      message.success('会话删除成功');
-    } catch (error) {
-      console.error('删除会话失败:', error);
-      message.error('删除会话失败，请重试');
-    } finally {
-      setIsLoading(false);
-    }
+    Modal.confirm({
+      title: '确认删除',
+      content: '确定要删除这条对话吗？此操作不可恢复。',
+      onOk: async () => {
+        try {
+          setIsLoading(true);
+          const response = await fetch(`/api/v1/chat/sessions/${sessionId}`, {
+            method: 'DELETE'
+          });
+          if (!response.ok) {
+            throw new Error('删除会话失败');
+          }
+          
+          // 从缓存中移除会话
+          setSessionCache(prev => {
+            const newCache = { ...prev };
+            delete newCache[sessionId];
+            return newCache;
+          });
+          
+          setSessions(prev => prev.filter(session => session.session_id !== sessionId));
+          if (currentSession && currentSession.session_id === sessionId) {
+            setCurrentSession(sessions.length > 1 ? sessions[0] : null);
+          }
+          message.success('会话删除成功');
+        } catch (error) {
+          console.error('删除会话失败:', error);
+          message.error('删除会话失败，请重试');
+        } finally {
+          setIsLoading(false);
+        }
+      },
+    });
   };
 
   const handleSendMessage = async (msg) => {
@@ -174,6 +181,7 @@ const ModelChat = () => {
         throw new Error('发送消息失败');
       }
       const result = await response.json();
+      const responseData = result.data || result;
       
       const updatedSession = {
         ...currentSession,
@@ -188,7 +196,7 @@ const ModelChat = () => {
           {
             message_uid: `msg_${Date.now() + 1}`,
             role: 'agent',
-            content: result.response,
+            content: responseData.response,
             submit_timestamp: Date.now() + 1
           }
         ]

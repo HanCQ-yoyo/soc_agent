@@ -205,6 +205,14 @@ const KnowledgeFeedback = () => {
     fetchFeedbacks(1, pagination.pageSize, newFilters);
   };
 
+  // 处理标签页切换
+  const handleTabChange = (key) => {
+    if (key === 'knowledge') {
+      // 当切换到知识检索标签页时，自动执行查询
+      searchKnowledge();
+    }
+  };
+
   // 重置检索参数
   const resetSearchParams = () => {
     setSearchParams({
@@ -224,28 +232,28 @@ const KnowledgeFeedback = () => {
       title: '反馈时间',
       dataIndex: 'feedback_time',
       key: 'feedback_time',
-      width: 160,
+      width: 'auto',
       render: (time) => formatTime(time),
     },
     {
       title: '分析ID',
       dataIndex: 'analysis_uid',
       key: 'analysis_uid',
-      width: 180,
+      width: 'auto',
       ellipsis: true,
     },
     {
       title: '反馈类型',
       dataIndex: 'feedback_type',
       key: 'feedback_type',
-      width: 120,
+      width: 'auto',
       render: (type) => getFeedbackTypeTag(type),
     },
     {
       title: '正确结果',
       dataIndex: 'correct_result',
       key: 'correct_result',
-      width: 100,
+      width: 'auto',
       render: (result) => getCorrectResultTag(result),
     },
     {
@@ -270,14 +278,17 @@ const KnowledgeFeedback = () => {
       title: '反馈原因',
       dataIndex: 'feedback_reason',
       key: 'feedback_reason',
-      flex: 1,
-      minWidth: 200,
-      ellipsis: true,
+      width: 250,
+      render: (text) => (
+        <div style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>
+          {text}
+        </div>
+      ),
     },
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 'auto',
       fixed: 'right',
       render: (_, record) => (
         <Space>
@@ -338,7 +349,7 @@ const KnowledgeFeedback = () => {
       width: 100,
       render: (score) => (
         <Tag color={score > 0.7 ? 'green' : score > 0.5 ? 'orange' : 'red'}>
-          {((score || 0) * 100).toFixed(2)}
+          {(score || 0).toFixed(2)}
         </Tag>
       ),
     },
@@ -364,6 +375,7 @@ const KnowledgeFeedback = () => {
         defaultActiveKey="feedback" 
         style={{ marginBottom: '1rem' }} 
         tabBarStyle={{ color: '#ffffff' }}
+        onChange={handleTabChange}
         items={[
           {
             key: 'feedback',
@@ -480,8 +492,8 @@ const KnowledgeFeedback = () => {
                         type="number"
                         min={0}
                         max={1}
-                        step={0.1}
-                        value={searchParams.similarity}
+                        step={0.01}
+                        value={searchParams.similarity.toFixed(2)}
                         onChange={(e) => setSearchParams({ ...searchParams, similarity: parseFloat(e.target.value) || 0.5 })}
                       />
                     </Col>
@@ -556,15 +568,17 @@ const KnowledgeFeedback = () => {
               </pre>
             </Card>
             
-            {currentFeedback.core_feature_tags && currentFeedback.core_feature_tags.length > 0 && (
-              <Card title="核心特征标签" style={{ marginTop: '1rem' }}>
+            <Card title="核心特征标签" style={{ marginTop: '1rem' }}>
+              {currentFeedback.core_feature_tags && currentFeedback.core_feature_tags.length > 0 ? (
                 <Space wrap>
                   {currentFeedback.core_feature_tags.map((tag, index) => (
                     <Tag key={index} color="blue">{tag}</Tag>
                   ))}
                 </Space>
-              </Card>
-            )}
+              ) : (
+                <span>无</span>
+              )}
+            </Card>
           </div>
         )}
       </Drawer>
@@ -586,7 +600,7 @@ const KnowledgeFeedback = () => {
             <Card title="基本信息" style={{ marginBottom: '1rem' }}>
               <p><strong>分析ID:</strong> {currentMetadata.analysis_id}</p>
               <p><strong>向量ID:</strong> {currentMetadata.milvus_vector_id}</p>
-              <p><strong>相似度:</strong> {((currentMetadata.score || 0) * 100).toFixed(2)}%</p>
+              <p><strong>相似度:</strong> {(currentMetadata.score || 0).toFixed(2)}</p>
               <p><strong>创建时间:</strong> {formatTime(currentMetadata.create_timestamp)}</p>
             </Card>
             <Card title="内容">
